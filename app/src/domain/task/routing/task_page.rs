@@ -13,8 +13,18 @@ pub fn TaskPage() -> impl IntoView {
     let params = use_params_map();
     let id = move || params.read().get("id").unwrap_or_default();
 
+    let messages = use_context::<Messages>().expect("Cant get messages context!");
+    let navigate = leptos_router::hooks::use_navigate();
+
     let task_resource =
         Resource::new_blocking(id, async move |id| get_task(id.parse().unwrap_or(0)).await);
+
+    Effect::new(move |_| {
+        if let Some(Err(err)) = task_resource.get() {
+            show_error(err.to_string(), messages);
+            navigate("/", Default::default());
+        }
+    });
 
     view! {
         <div class="container p-4">

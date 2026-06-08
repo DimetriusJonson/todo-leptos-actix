@@ -20,10 +20,13 @@ pub async fn get_task(id: i64) -> Result<Task, ServerFnError> {
     if let Some(user) = get_current_user(true).await? {
         let app_state = use_app_state().await?;
 
-        let task =
-            get_task_from_db(&app_state.pool, id, user.id).await.map_err(ServerFnError::new)?;
-
-        return Ok(task.unwrap_or_default());
+        if let Some(task) =
+            get_task_from_db(&app_state.pool, id, user.id).await.map_err(ServerFnError::new)?
+        {
+            return Ok(task);
+        } else {
+            return Err(ApiError::NotFound("Задача не найдена!".to_owned()))?;
+        }
     }
 
     Ok(Task::default())
