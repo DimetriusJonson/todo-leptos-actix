@@ -4,7 +4,6 @@ pub mod app;
 pub mod common;
 pub mod components;
 pub mod domain;
-//pub mod fallback;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

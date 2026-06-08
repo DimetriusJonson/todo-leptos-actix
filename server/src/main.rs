@@ -13,7 +13,6 @@ use tracing_log::LogTracer;
 use tracing_subscriber::{EnvFilter, FmtSubscriber};
 
 mod db;
-//mod fallback;
 
 use crate::db::create_pool;
 
