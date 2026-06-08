@@ -4,9 +4,9 @@ use leptos::prelude::*;
 use validator::Validate;
 
 use crate::common::validate_helper::{
-    ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map
+    ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map,
 };
-use crate::components::layout::message_banner::{Messages, show_info};
+use crate::components::layout::message_banner::{Messages, show_error, show_info};
 use crate::components::ui::button::Button;
 use crate::components::ui::main_title::MainTitle;
 use crate::components::ui::text_with_error::TextWithError;
@@ -28,17 +28,23 @@ pub fn CreateUserPage() -> impl IntoView {
     });
     let common_error = move || ui_build_common_error(validation_errors);
 
-    Effect::new(move |_| {
-        if let Some(Ok(user)) = create_user.value().get() {
-            show_info(format!("Создан пользователь {}", &user.username.unwrap()), messages);
-            create_user.clear();
-        }
+    Effect::new(move |_| match create_user.value().get() {
+        Some(res) => match res {
+            Ok(user) => {
+                show_info(format!("Создан пользователь {}", &user.username.unwrap()), messages);
+                create_user.clear();
+            }
+            Err(err) => {
+                show_error(err.to_string(), messages);
+            }
+        },
+        None => (),
     });
 
     view! {
         <div class="container p-4">
             <MainTitle title=|| "Создать пользователя".to_owned() />
-            <ActionForm action=create_user 
+            <ActionForm action=create_user
                 on:submit:capture=move |event| {
                     if let Ok(params) = CreateUser::from_event(&event) {
                         if let Err(validation_errors) = params.validate() {
@@ -51,7 +57,7 @@ pub fn CreateUserPage() -> impl IntoView {
                 }
                 on:input=move |event| {
                         validate_form(event, set_validation_errors, CreateUserParams::default());
-                        create_user.clear();                    
+                        create_user.clear();
                     }
             >
                 <input name="params[version]" type="hidden" value={move || create_user.version().get()} />

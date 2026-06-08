@@ -5,9 +5,9 @@ use leptos_router::hooks::use_query_map;
 use validator::Validate;
 
 use crate::common::validate_helper::{
-    ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map
+    ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map,
 };
-use crate::components::layout::message_banner::{Messages, show_info};
+use crate::components::layout::message_banner::{Messages, show_error, show_info};
 use crate::components::ui::button::Button;
 use crate::components::ui::main_title::MainTitle;
 use crate::components::ui::text_with_error::TextWithError;
@@ -32,11 +32,17 @@ pub fn LoginPage() -> impl IntoView {
     });
     let common_error = move || ui_build_common_error(validation_errors);
 
-    Effect::new(move |_| {
-        if let Some(Ok(_)) = login.value().get() {
-            show_info("Вы вошли!".to_owned(), messages);
-            login.clear();
-        }
+    Effect::new(move |_| match login.value().get() {
+        Some(res) => match res {
+            Ok(_) => {
+                show_info("Вы вошли!".to_owned(), messages);
+                login.clear();
+            }
+            Err(err) => {
+                show_error(err.to_string(), messages);
+            }
+        },
+        None => (),
     });
 
     view! {

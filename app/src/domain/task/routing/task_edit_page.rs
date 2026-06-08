@@ -5,9 +5,9 @@ use leptos_router::hooks::use_params_map;
 use validator::Validate;
 
 use crate::common::validate_helper::{
-    ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map
+    ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map,
 };
-use crate::components::layout::message_banner::{Messages, show_info};
+use crate::components::layout::message_banner::{Messages, show_error, show_info};
 use crate::components::ui::button::Button;
 use crate::components::ui::button_link::ButtonLink;
 use crate::components::ui::checkbox_with_label::CheckboxWithLabel;
@@ -68,11 +68,17 @@ pub fn TaskEditForm(
 
     let messages = use_context::<Messages>().expect("Cant get messages context!");
 
-    Effect::new(move |_| {
-        if let Some(Ok(_)) = update_or_create_task.value().get() {
-            show_info("Задача сохранена!".to_owned(), messages);
-            update_or_create_task.clear();
-        }
+    Effect::new(move |_| match update_or_create_task.value().get() {
+        Some(res) => match res {
+            Ok(_) => {
+                show_info("Задача сохранена!".to_owned(), messages);
+                update_or_create_task.clear();
+            }
+            Err(err) => {
+                show_error(err.to_string(), messages);
+            }
+        },
+        None => (),
     });
 
     view! {

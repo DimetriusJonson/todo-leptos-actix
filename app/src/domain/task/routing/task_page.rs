@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 
-use crate::components::layout::message_banner::{Messages, show_info};
+use crate::components::layout::message_banner::{Messages, show_error, show_info};
 use crate::components::ui::button::Button;
 use crate::components::ui::button_link::ButtonLink;
 use crate::domain::task::model::task::Task;
@@ -13,7 +13,8 @@ pub fn TaskPage() -> impl IntoView {
     let params = use_params_map();
     let id = move || params.read().get("id").unwrap_or_default();
 
-    let task_resource = Resource::new_blocking(id, async move |id| get_task(id.parse().unwrap_or(0)).await);
+    let task_resource =
+        Resource::new_blocking(id, async move |id| get_task(id.parse().unwrap_or(0)).await);
 
     view! {
         <div class="container p-4">
@@ -45,11 +46,17 @@ pub fn TaskDetails(task: Task) -> impl IntoView {
 
     let messages = use_context::<Messages>().expect("Cant get messages context!");
 
-    Effect::new(move |_| {
-        if let Some(Ok(_)) = delete_task.value().get() {
-            show_info("Задача удалена!".to_owned(), messages);
-            delete_task.clear();
-        }
+    Effect::new(move |_| match delete_task.value().get() {
+        Some(res) => match res {
+            Ok(_) => {
+                show_info("Задача удалена!".to_owned(), messages);
+                delete_task.clear();
+            }
+            Err(err) => {
+                show_error(err.to_string(), messages);
+            }
+        },
+        None => (),
     });
 
     view! {
