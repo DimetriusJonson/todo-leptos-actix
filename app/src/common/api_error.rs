@@ -10,6 +10,7 @@ use crate::common::validate_helper::transform_validation_errors;
 #[derive(Debug, PartialEq)]
 pub enum ApiError {
     UnAuthorized(String),
+    NotFound(String),
     Validation(ValidationErrors),
     Network(String),
     ServerFn(ServerFnErrorErr),
@@ -35,6 +36,7 @@ impl Display for ApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnAuthorized(msg) => write!(f, "Пользователь не авторизован. {}", msg),
+            Self::NotFound(msg) => write!(f, "{}", msg),
             Self::Network(msg) => write!(f, "Ошибка запроса: {}.", msg),
             Self::Validation(errors) => {
                 write!(f, "{}", serde_json::to_string(&errors).expect("Failed serialize error!"))

@@ -1,4 +1,12 @@
 #[cfg(feature = "ssr")]
+use super::task_db::db::*;
+#[cfg(feature = "ssr")]
+use crate::common::api_error::ApiError;
+#[cfg(feature = "ssr")]
+use crate::common::app_state::ssr::use_app_state;
+#[cfg(feature = "ssr")]
+use crate::domain::user::user_services::ssr::get_current_user;
+#[cfg(feature = "ssr")]
 use leptos::prelude::*;
 
 use leptos::server;
@@ -9,14 +17,11 @@ use crate::domain::task::model::task::Task;
 
 #[server]
 pub async fn get_task(id: i64) -> Result<Task, ServerFnError> {
-    use super::task_db::db::*;
-    use crate::common::app_state::ssr::use_app_state;
-    use crate::domain::user::user_services::ssr::get_current_user;
-
     if let Some(user) = get_current_user(true).await? {
         let app_state = use_app_state().await?;
 
-        let task = get_task_from_db(&app_state.pool, id, user.id).await.map_err(ServerFnError::new)?;
+        let task =
+            get_task_from_db(&app_state.pool, id, user.id).await.map_err(ServerFnError::new)?;
 
         return Ok(task.unwrap_or_default());
     }
@@ -26,10 +31,6 @@ pub async fn get_task(id: i64) -> Result<Task, ServerFnError> {
 
 #[server]
 pub async fn delete_task(id: i64) -> Result<bool, ServerFnError> {
-    use super::task_db::db::*;
-    use crate::common::app_state::ssr::use_app_state;
-    use crate::domain::user::user_services::ssr::get_current_user;
-
     if let Some(user) = get_current_user(true).await? {
         let app_state = use_app_state().await?;
 
@@ -47,15 +48,13 @@ pub async fn get_tasks(
     filter: Option<String>,
     sort_kind: Option<String>,
 ) -> Result<Vec<Task>, ServerFnError> {
-    use super::task_db::db::*;
-    use crate::common::app_state::ssr::use_app_state;
     use crate::domain::task::model::task::{filter_task, sort_task};
-    use crate::domain::user::user_services::ssr::get_current_user;
 
     if let Some(user) = get_current_user(false).await? {
         let app_state = use_app_state().await?;
 
-        let mut tasks = get_tasks_from_db(&app_state.pool, user.id).await.map_err(ServerFnError::new)?;
+        let mut tasks =
+            get_tasks_from_db(&app_state.pool, user.id).await.map_err(ServerFnError::new)?;
 
         if filter.is_some() {
             tasks = tasks.into_iter().filter(|t| filter_task(t, &filter)).collect::<Vec<Task>>();
@@ -74,11 +73,6 @@ pub async fn get_tasks(
 pub async fn update_or_create_task(task: Task) -> Result<Task, ServerFnError> {
     use validator::Validate;
 
-    use super::task_db::db::*;
-    use crate::common::app_state::ssr::use_app_state;
-    use crate::common::api_error::ApiError;
-    use crate::domain::user::user_services::ssr::get_current_user;
-
     if let Some(user) = get_current_user(true).await? {
         let app_state = use_app_state().await?;
 
@@ -87,9 +81,10 @@ pub async fn update_or_create_task(task: Task) -> Result<Task, ServerFnError> {
             return Err(ApiError::validation(validation_errors))?;
         }
 
-        if let Some(found_task) = get_task_by_title_from_db(&app_state.pool, &task.title, user.id.unwrap())
-            .await
-            .map_err(ServerFnError::new)?
+        if let Some(found_task) =
+            get_task_by_title_from_db(&app_state.pool, &task.title, user.id.unwrap())
+                .await
+                .map_err(ServerFnError::new)?
             && found_task.id != task.id
         {
             return Err(ApiError::validation_field(
@@ -118,11 +113,6 @@ pub async fn update_or_create_task(task: Task) -> Result<Task, ServerFnError> {
 
 #[server]
 pub async fn change_completed_task(id: i64, completed: bool) -> Result<Task, ServerFnError> {
-    use super::task_db::db::*;
-    use crate::common::app_state::ssr::use_app_state;
-    use crate::common::errors::AppError;
-    use crate::domain::user::user_services::ssr::get_current_user;
-
     if let Some(user) = get_current_user(true).await? {
         let app_state = use_app_state().await?;
 
@@ -138,7 +128,7 @@ pub async fn change_completed_task(id: i64, completed: bool) -> Result<Task, Ser
                 .await
                 .map_err(ServerFnError::new);
         } else {
-            return Err(AppError::NotFound("Задача не найдена!".to_owned()))?;
+            return Err(ApiError::NotFound("Задача не найдена!".to_owned()))?;
         }
     }
 

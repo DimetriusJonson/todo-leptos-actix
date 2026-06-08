@@ -1,4 +1,14 @@
 #[cfg(feature = "ssr")]
+use crate::common::api_error::ApiError;
+#[cfg(feature = "ssr")]
+use crate::common::app_state::ssr::use_app_state;
+#[cfg(feature = "ssr")]
+use crate::domain::home::routing::routes::HomeRoutes;
+#[cfg(feature = "ssr")]
+use crate::domain::user::user_db::db::*;
+#[cfg(feature = "ssr")]
+use leptos::context::use_context;
+#[cfg(feature = "ssr")]
 use leptos::prelude::*;
 
 use leptos::server;
@@ -98,11 +108,7 @@ pub async fn create_user(params: CreateUserParams) -> Result<User, ServerFnError
     use bcrypt::DEFAULT_COST;
     use validator::Validate;
 
-    use crate::common::api_error::ApiError;
-    use crate::common::app_state::ssr::use_app_state;
-    use crate::domain::home::routing::routes::HomeRoutes;
     use crate::domain::user::routing::routes::UserRoutes;
-    use crate::domain::user::user_db::db::*;
 
     let validate_result = params.validate();
     if let Err(validation_errors) = validate_result {
@@ -145,14 +151,9 @@ pub async fn create_user(params: CreateUserParams) -> Result<User, ServerFnError
 pub async fn login(params: LoginParams) -> Result<User, ServerFnError> {
     use actix_web::http::header::HeaderValue;
     use actix_web::http::header::SET_COOKIE;
-    use leptos::context::use_context;
     use validator::Validate;
 
     use self::ssr::*;
-    use crate::common::api_error::ApiError;
-    use crate::common::app_state::ssr::use_app_state;
-    use crate::domain::home::routing::routes::HomeRoutes;
-    use crate::domain::user::user_db::db::*;
 
     let response_options = use_context::<leptos_actix::ResponseOptions>().unwrap();
 
@@ -209,12 +210,8 @@ pub async fn auth_data() -> Result<User, ServerFnError> {
 pub async fn logout() -> Result<bool, ServerFnError> {
     use actix_web::http::header::HeaderValue;
     use actix_web::http::header::SET_COOKIE;
-    use leptos::context::use_context;
 
     use self::ssr::*;
-    use crate::common::app_state::ssr::use_app_state;
-    use crate::domain::home::routing::routes::HomeRoutes;
-    use crate::domain::user::user_db::db::*;
 
     if get_current_user(false).await?.is_some() {
         let response_options = use_context::<leptos_actix::ResponseOptions>().unwrap();
