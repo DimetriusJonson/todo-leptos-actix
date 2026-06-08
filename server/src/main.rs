@@ -4,7 +4,7 @@ use std::{env, thread};
 
 use actix_files::Files;
 use actix_web::{App, HttpServer, middleware, web};
-use app::app::shell;
+use app::{app::shell, common::app_state::ssr::AppState};
 use dotenv::dotenv;
 use leptos::prelude::*;
 use leptos_actix::{LeptosRoutes, generate_route_list};
@@ -53,6 +53,7 @@ async fn main() -> anyhow::Result<()> {
         let routes = generate_route_list(app::app::App);
         let leptos_options = &conf.leptos_options;
         let site_root = leptos_options.site_root.clone().to_string();
+        let app_state = AppState { leptos_options: leptos_options.clone(), pool: pool.clone() };
 
         println!("listening on http://{}", &addr);
 
@@ -62,12 +63,13 @@ async fn main() -> anyhow::Result<()> {
             // serve other assets from the `assets` directory
             .service(Files::new("/assets", &site_root))
             // serve the favicon from /favicon.ico
-            //.service(favicon)
+            .service(favicon)
+            .service(bulma)
             .leptos_routes(routes, {
                 let leptos_options = leptos_options.clone();
                 move || shell(leptos_options.clone())
             })
-            .app_data(web::Data::new(pool.clone()));
+            .app_data(web::Data::new(app_state));
 
         app.wrap(middleware::Compress::default())
     })
@@ -76,4 +78,22 @@ async fn main() -> anyhow::Result<()> {
     .await?;
 
     Ok(())
+}
+
+#[actix_web::get("favicon.ico")]
+async fn favicon(
+    app_state: actix_web::web::Data<AppState>,
+) -> actix_web::Result<actix_files::NamedFile> {
+    let leptos_options = &app_state.leptos_options;
+    let site_root = &leptos_options.site_root;
+    Ok(actix_files::NamedFile::open(format!("{site_root}/favicon.ico"))?)
+}
+
+#[actix_web::get("bulma.min.css")]
+async fn bulma(
+    app_state: actix_web::web::Data<AppState>,
+) -> actix_web::Result<actix_files::NamedFile> {
+    let leptos_options = &app_state.leptos_options;
+    let site_root = &leptos_options.site_root;
+    Ok(actix_files::NamedFile::open(format!("{site_root}/bulma.min.css"))?)
 }

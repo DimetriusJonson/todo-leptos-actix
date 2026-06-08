@@ -10,15 +10,13 @@ use crate::domain::task::model::task::Task;
 #[server]
 pub async fn get_task(id: i64) -> Result<Task, ServerFnError> {
     use super::task_db::db::*;
-    use crate::common::DbPool;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::domain::user::user_services::ssr::get_current_user;
-    use actix_web::web;
 
     if let Some(user) = get_current_user(true).await? {
-        let pool =
-            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+        let app_state = use_app_state().await?;
 
-        let task = get_task_from_db(&pool, id, user.id).await.map_err(ServerFnError::new)?;
+        let task = get_task_from_db(&app_state.pool, id, user.id).await.map_err(ServerFnError::new)?;
 
         return Ok(task.unwrap_or_default());
     }
@@ -29,15 +27,13 @@ pub async fn get_task(id: i64) -> Result<Task, ServerFnError> {
 #[server]
 pub async fn delete_task(id: i64) -> Result<bool, ServerFnError> {
     use super::task_db::db::*;
-    use crate::common::DbPool;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::domain::user::user_services::ssr::get_current_user;
-    use actix_web::web;
 
     if let Some(user) = get_current_user(true).await? {
-        let pool =
-            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+        let app_state = use_app_state().await?;
 
-        delete_task_in_db(&pool, id, user.id).await.map_err(ServerFnError::new)?;
+        delete_task_in_db(&app_state.pool, id, user.id).await.map_err(ServerFnError::new)?;
 
         leptos_actix::redirect("/");
         return Ok(true);
@@ -52,16 +48,14 @@ pub async fn get_tasks(
     sort_kind: Option<String>,
 ) -> Result<Vec<Task>, ServerFnError> {
     use super::task_db::db::*;
-    use crate::common::DbPool;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::domain::task::model::task::{filter_task, sort_task};
     use crate::domain::user::user_services::ssr::get_current_user;
-    use actix_web::web;
 
     if let Some(user) = get_current_user(false).await? {
-        let pool =
-            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+        let app_state = use_app_state().await?;
 
-        let mut tasks = get_tasks_from_db(&pool, user.id).await.map_err(ServerFnError::new)?;
+        let mut tasks = get_tasks_from_db(&app_state.pool, user.id).await.map_err(ServerFnError::new)?;
 
         if filter.is_some() {
             tasks = tasks.into_iter().filter(|t| filter_task(t, &filter)).collect::<Vec<Task>>();
@@ -81,21 +75,19 @@ pub async fn update_or_create_task(task: Task) -> Result<Task, ServerFnError> {
     use validator::Validate;
 
     use super::task_db::db::*;
-    use crate::common::DbPool;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::common::api_error::ApiError;
     use crate::domain::user::user_services::ssr::get_current_user;
-    use actix_web::web;
 
     if let Some(user) = get_current_user(true).await? {
-        let pool =
-            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+        let app_state = use_app_state().await?;
 
         let validate_result = task.validate();
         if let Err(validation_errors) = validate_result {
             return Err(ApiError::validation(validation_errors))?;
         }
 
-        if let Some(found_task) = get_task_by_title_from_db(&pool, &task.title, user.id.unwrap())
+        if let Some(found_task) = get_task_by_title_from_db(&app_state.pool, &task.title, user.id.unwrap())
             .await
             .map_err(ServerFnError::new)?
             && found_task.id != task.id
@@ -108,11 +100,11 @@ pub async fn update_or_create_task(task: Task) -> Result<Task, ServerFnError> {
         }
 
         let saved_task = if task.id.is_some() {
-            update_task_in_db(&pool, Task { ..task }.fix_completed_at(), user.id)
+            update_task_in_db(&app_state.pool, Task { ..task }.fix_completed_at(), user.id)
                 .await
                 .map_err(ServerFnError::new)?
         } else {
-            create_task_in_db(&pool, Task { ..task }.fix_completed_at(), user.id.unwrap())
+            create_task_in_db(&app_state.pool, Task { ..task }.fix_completed_at(), user.id.unwrap())
                 .await
                 .map_err(ServerFnError::new)?
         };
@@ -127,24 +119,22 @@ pub async fn update_or_create_task(task: Task) -> Result<Task, ServerFnError> {
 #[server]
 pub async fn change_completed_task(id: i64, completed: bool) -> Result<Task, ServerFnError> {
     use super::task_db::db::*;
-    use crate::common::DbPool;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::common::errors::AppError;
     use crate::domain::user::user_services::ssr::get_current_user;
-    use actix_web::web;
 
     if let Some(user) = get_current_user(true).await? {
-        let pool =
-            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+        let app_state = use_app_state().await?;
 
         if let Some(mut task) =
-            get_task_from_db(&pool, id, user.id).await.map_err(ServerFnError::new)?
+            get_task_from_db(&app_state.pool, id, user.id).await.map_err(ServerFnError::new)?
         {
             task.completed_at = match completed {
                 true => Some("on".to_owned()),
                 false => None,
             };
 
-            return update_task_in_db(&pool, task.fix_completed_at(), user.id)
+            return update_task_in_db(&app_state.pool, task.fix_completed_at(), user.id)
                 .await
                 .map_err(ServerFnError::new);
         } else {

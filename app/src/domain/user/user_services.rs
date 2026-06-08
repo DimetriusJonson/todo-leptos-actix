@@ -1,7 +1,4 @@
 #[cfg(feature = "ssr")]
-use actix_web::web;
-
-#[cfg(feature = "ssr")]
 use leptos::prelude::*;
 
 use leptos::server;
@@ -101,8 +98,8 @@ pub async fn create_user(params: CreateUserParams) -> Result<User, ServerFnError
     use bcrypt::DEFAULT_COST;
     use validator::Validate;
 
-    use crate::common::DbPool;
     use crate::common::api_error::ApiError;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::domain::home::routing::routes::HomeRoutes;
     use crate::domain::user::routing::routes::UserRoutes;
     use crate::domain::user::user_db::db::*;
@@ -112,9 +109,9 @@ pub async fn create_user(params: CreateUserParams) -> Result<User, ServerFnError
         return Err(ApiError::validation(validation_errors))?;
     }
 
-    let pool = leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+    let app_state = use_app_state().await?;
 
-    if get_user_by_name_from_db(&pool, params.name.to_owned())
+    if get_user_by_name_from_db(&app_state.pool, params.name.to_owned())
         .await
         .map_err(ServerFnError::new)?
         .is_some()
@@ -130,7 +127,7 @@ pub async fn create_user(params: CreateUserParams) -> Result<User, ServerFnError
         .map_err(|err| ServerFnError::new(format!("Failed hash password: {}", err)))?;
 
     let user = create_user_in_db(
-        &pool,
+        &app_state.pool,
         &User { username: params.name.to_owned(), password: Some(hash_pass), ..Default::default() },
     )
     .await
@@ -152,8 +149,8 @@ pub async fn login(params: LoginParams) -> Result<User, ServerFnError> {
     use validator::Validate;
 
     use self::ssr::*;
-    use crate::common::DbPool;
     use crate::common::api_error::ApiError;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::domain::home::routing::routes::HomeRoutes;
     use crate::domain::user::user_db::db::*;
 
@@ -164,18 +161,22 @@ pub async fn login(params: LoginParams) -> Result<User, ServerFnError> {
         return Err(ApiError::validation(validation_errors))?;
     }
 
-    let pool = leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+    let app_state = use_app_state().await?;
 
-    if let Some(user) =
-        get_user_by_name_from_db(&pool, params.name.to_owned()).await.map_err(ServerFnError::new)?
+    if let Some(user) = get_user_by_name_from_db(&app_state.pool, params.name.to_owned())
+        .await
+        .map_err(ServerFnError::new)?
     {
         if bcrypt::verify(params.password.to_owned().unwrap(), &user.password.to_owned().unwrap())
             .map_err(ServerFnError::new)?
         {
             let token = create_token(user.id.unwrap(), user.username.to_owned().unwrap())?;
-            update_user_in_db(&pool, &User { token: Some(token.to_owned()), ..Default::default() })
-                .await
-                .map_err(ServerFnError::new)?;
+            update_user_in_db(
+                &app_state.pool,
+                &User { token: Some(token.to_owned()), ..Default::default() },
+            )
+            .await
+            .map_err(ServerFnError::new)?;
 
             let cookie_value = format!(
                 "todo-token={}; Path=/; HttpOnly; SameSite=Lax; max-age=86400;",
@@ -211,20 +212,22 @@ pub async fn logout() -> Result<bool, ServerFnError> {
     use leptos::context::use_context;
 
     use self::ssr::*;
-    use crate::common::DbPool;
+    use crate::common::app_state::ssr::use_app_state;
     use crate::domain::home::routing::routes::HomeRoutes;
     use crate::domain::user::user_db::db::*;
 
     if get_current_user(false).await?.is_some() {
         let response_options = use_context::<leptos_actix::ResponseOptions>().unwrap();
 
-        let pool =
-            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+        let app_state = use_app_state().await?;
 
         if let Some(user) = ssr::get_current_user(false).await? {
-            update_user_in_db(&pool, &User { id: user.id, token: None, ..Default::default() })
-                .await
-                .map_err(ServerFnError::new)?;
+            update_user_in_db(
+                &app_state.pool,
+                &User { id: user.id, token: None, ..Default::default() },
+            )
+            .await
+            .map_err(ServerFnError::new)?;
         }
 
         let cookie_value = "todo-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
