@@ -62,7 +62,7 @@ pub fn App() -> impl IntoView {
                     <main>
                         <MessageBanner />
                         <Navbar />
-                        <Routes transition=true fallback=|| "Page not found.".into_view()>
+                        <Routes transition=true fallback=NotFound>
                             <ParentRoute path=path!("/") view=Outlet>
 
                                 <ParentRoute path=StaticSegment(UserRoutes::base_segment()) view=Outlet>
@@ -79,10 +79,25 @@ pub fn App() -> impl IntoView {
                                 <Route path=path!("") view=HomePage />
 
                             </ParentRoute>
+
+                            <Route path=path!("/*any") view=NotFound />
+
                         </Routes>
                     </main>
                 </div>
             </section>
         </Router>
+    }
+}
+
+#[component]
+pub fn NotFound() -> impl IntoView {
+    view! {
+        <section class="section">
+            <div class="box has-text-centered">
+                <div class="title is-size-1 has-text-danger">404</div>
+                <div class="subtitle">Страница не найдена</div>
+            </div>
+        </section>
     }
 }
