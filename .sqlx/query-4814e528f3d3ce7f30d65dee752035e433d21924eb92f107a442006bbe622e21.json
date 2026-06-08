@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                UPDATE users \n                SET\n                    token = $1\n                WHERE id = $2 and deleted_at is null\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4814e528f3d3ce7f30d65dee752035e433d21924eb92f107a442006bbe622e21"
+}

@@ -1,0 +1,190 @@
+#[cfg(feature = "ssr")]
+use leptos::prelude::*;
+
+use leptos::server;
+use leptos::server_fn::ServerFnError;
+
+use crate::components::ui::select_input::SelectOption;
+use crate::domain::task::model::task::Task;
+
+#[server]
+pub async fn get_task(id: i64) -> Result<Task, ServerFnError> {
+    use super::task_db::db::*;
+    use crate::common::DbPool;
+    use crate::domain::user::user_services::ssr::get_current_user;
+    use actix_web::web;
+
+    if let Some(user) = get_current_user(true).await? {
+        let pool =
+            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+
+        let task = get_task_from_db(&pool, id, user.id).await.map_err(ServerFnError::new)?;
+
+        return Ok(task.unwrap_or_default());
+    }
+
+    Ok(Task::default())
+}
+
+#[server]
+pub async fn delete_task(id: i64) -> Result<bool, ServerFnError> {
+    use super::task_db::db::*;
+    use crate::common::DbPool;
+    use crate::domain::user::user_services::ssr::get_current_user;
+    use actix_web::web;
+
+    if let Some(user) = get_current_user(true).await? {
+        let pool =
+            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+
+        delete_task_in_db(&pool, id, user.id).await.map_err(ServerFnError::new)?;
+
+        leptos_actix::redirect("/");
+        return Ok(true);
+    }
+
+    Ok(false)
+}
+
+#[server]
+pub async fn get_tasks(
+    filter: Option<String>,
+    sort_kind: Option<String>,
+) -> Result<Vec<Task>, ServerFnError> {
+    use super::task_db::db::*;
+    use crate::common::DbPool;
+    use crate::domain::task::model::task::{filter_task, sort_task};
+    use crate::domain::user::user_services::ssr::get_current_user;
+    use actix_web::web;
+
+    if let Some(user) = get_current_user(false).await? {
+        let pool =
+            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+
+        let mut tasks = get_tasks_from_db(&pool, user.id).await.map_err(ServerFnError::new)?;
+
+        if filter.is_some() {
+            tasks = tasks.into_iter().filter(|t| filter_task(t, &filter)).collect::<Vec<Task>>();
+        }
+
+        if sort_kind.is_some() {
+            tasks.sort_by(|task1, task2| sort_task(task1, task2, &sort_kind));
+        }
+
+        return Ok(tasks);
+    }
+    Ok(vec![])
+}
+
+#[server]
+pub async fn update_or_create_task(task: Task) -> Result<Task, ServerFnError> {
+    use validator::Validate;
+
+    use super::task_db::db::*;
+    use crate::common::DbPool;
+    use crate::common::api_error::ApiError;
+    use crate::domain::user::user_services::ssr::get_current_user;
+    use actix_web::web;
+
+    if let Some(user) = get_current_user(true).await? {
+        let pool =
+            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+
+        let validate_result = task.validate();
+        if let Err(validation_errors) = validate_result {
+            return Err(ApiError::validation(validation_errors))?;
+        }
+
+        if let Some(found_task) = get_task_by_title_from_db(&pool, &task.title, user.id.unwrap())
+            .await
+            .map_err(ServerFnError::new)?
+            && found_task.id != task.id
+        {
+            return Err(ApiError::validation_field(
+                "title",
+                "TaskAlreadyExist",
+                "Задача с таким названием уже существует!",
+            ))?;
+        }
+
+        let saved_task = if task.id.is_some() {
+            update_task_in_db(&pool, Task { ..task }.fix_completed_at(), user.id)
+                .await
+                .map_err(ServerFnError::new)?
+        } else {
+            create_task_in_db(&pool, Task { ..task }.fix_completed_at(), user.id.unwrap())
+                .await
+                .map_err(ServerFnError::new)?
+        };
+
+        leptos_actix::redirect(&format!("/task/{}", saved_task.id.unwrap()));
+        return Ok(saved_task);
+    }
+
+    Ok(task)
+}
+
+#[server]
+pub async fn change_completed_task(id: i64, completed: bool) -> Result<Task, ServerFnError> {
+    use super::task_db::db::*;
+    use crate::common::DbPool;
+    use crate::common::errors::AppError;
+    use crate::domain::user::user_services::ssr::get_current_user;
+    use actix_web::web;
+
+    if let Some(user) = get_current_user(true).await? {
+        let pool =
+            leptos_actix::extract::<web::Data<DbPool>>().await.map_err(ServerFnError::new)?;
+
+        if let Some(mut task) =
+            get_task_from_db(&pool, id, user.id).await.map_err(ServerFnError::new)?
+        {
+            task.completed_at = match completed {
+                true => Some("on".to_owned()),
+                false => None,
+            };
+
+            return update_task_in_db(&pool, task.fix_completed_at(), user.id)
+                .await
+                .map_err(ServerFnError::new);
+        } else {
+            return Err(AppError::NotFound("Задача не найдена!".to_owned()))?;
+        }
+    }
+
+    Ok(Task::default())
+}
+
+#[server]
+pub async fn get_priorities() -> Result<Vec<SelectOption>, ServerFnError> {
+    Ok(vec![
+        (Some("C".to_owned()), Task::priority_by_name("C")),
+        (Some("H".to_owned()), Task::priority_by_name("H")),
+        (Some("N".to_owned()), Task::priority_by_name("N")),
+        (Some("L".to_owned()), Task::priority_by_name("L")),
+    ])
+}
+
+pub async fn get_filter_options() -> Result<Vec<SelectOption>, ServerFnError> {
+    Ok(vec![filter_to_option("Completed".to_owned()), filter_to_option("Uncompleted".to_owned())])
+}
+
+fn filter_to_option(filter: String) -> SelectOption {
+    match filter.as_str() {
+        "Completed" => (Some(filter), "Завершенные".to_owned()),
+        "Uncompleted" => (Some(filter), "Незавершенные".to_owned()),
+        _ => (None, "Не выбран".to_owned()),
+    }
+}
+
+pub async fn get_sort_options() -> Result<Vec<SelectOption>, ServerFnError> {
+    Ok(vec![sort_to_option("Title".to_owned()), sort_to_option("Priority".to_owned())])
+}
+
+fn sort_to_option(sort_kind: String) -> SelectOption {
+    match sort_kind.as_str() {
+        "Title" => (Some(sort_kind), "Название".to_owned()),
+        "Priority" => (Some(sort_kind), "Приоритет".to_owned()),
+        _ => (None, "Не выбран".to_owned()),
+    }
+}
