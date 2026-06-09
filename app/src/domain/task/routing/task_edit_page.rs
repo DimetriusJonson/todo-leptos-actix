@@ -39,7 +39,11 @@ pub fn TaskEditPage() -> impl IntoView {
             <Transition fallback=move || view! { <TaskEditForm task={Task::default()} priorities={None} disabled=true /> }>
                 {move || Suspend::new(async move {
                     let priorities = priorities_resource.await.ok();
-                    task_resource.await.map(|task| view! { <TaskEditForm task priorities disabled=false /> })
+                    if let Some(_) = params.read().get("id") {
+                        task_resource.get().map(|data| data.map(|task| view! { <TaskEditForm task priorities disabled=false /> }))
+                    } else {
+                        Some(Ok(view! { <TaskEditForm task={Task::default()} priorities disabled=false /> }))
+                    }
                 })}
             </Transition>
         </div>
