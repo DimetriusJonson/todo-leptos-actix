@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos::reactive::spawn_local;
 use web_sys::{Event, HtmlInputElement};
 
-use crate::components::layout::message_banner::{Messages, show_error, show_info};
+use crate::components::layout::message_banner::{Messages, show_info, show_server_error};
 use crate::components::ui::checkbox::Checkbox;
 use crate::domain::task::model::task::{Task, filter_task};
 use crate::domain::task::routing::routes::TaskRoutes;
@@ -48,13 +48,7 @@ pub fn TasksList(filter: ReadSignal<Option<String>>) -> impl IntoView {
                             );
                         }
                     }
-                    Err(err) => {
-                        let msg = match err {
-                            ServerFnError::ServerError(err) => err,
-                            _ => err.to_string(),
-                        };
-                        show_error(msg, messages);
-                    }
+                    Err(err) => show_server_error(err, messages)
                 }
             });
         }

@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
 
-use crate::components::layout::message_banner::{Messages, show_error, show_info};
+use crate::components::layout::message_banner::{Messages, show_info, show_server_error};
 use crate::components::ui::button::Button;
 use crate::components::ui::button_link::ButtonLink;
 use crate::domain::home::routing::routes::HomeRoutes;
@@ -29,7 +29,7 @@ pub fn Navbar() -> impl IntoView {
                     show_info("Вы вышли!".to_owned(), messages);
                     logout.clear();
                 }
-                Err(err) => show_error(err.to_string(), messages),
+                Err(err) => show_server_error(err, messages),
             }
         }
     });

@@ -1,7 +1,9 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 
-use crate::components::layout::message_banner::{Messages, show_error, show_info};
+use crate::components::layout::message_banner::{
+    Messages, show_info, show_server_error,
+};
 use crate::components::ui::button::Button;
 use crate::components::ui::button_link::ButtonLink;
 use crate::domain::task::model::task::Task;
@@ -21,7 +23,7 @@ pub fn TaskPage() -> impl IntoView {
 
     Effect::new(move |_| {
         if let Some(Err(err)) = task_resource.get() {
-            show_error(err.to_string(), messages);
+            show_server_error(err, messages);
             navigate("/", Default::default());
         }
     });
@@ -62,9 +64,7 @@ pub fn TaskDetails(task: Task) -> impl IntoView {
                 show_info("Задача удалена!".to_owned(), messages);
                 delete_task.clear();
             }
-            Err(err) => {
-                show_error(err.to_string(), messages);
-            }
+            Err(err) => show_server_error(err, messages),
         },
         None => (),
     });

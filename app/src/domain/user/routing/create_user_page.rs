@@ -6,7 +6,7 @@ use validator::Validate;
 use crate::common::validate_helper::{
     ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map,
 };
-use crate::components::layout::message_banner::{Messages, show_error, show_info};
+use crate::components::layout::message_banner::{Messages, show_info, show_server_error};
 use crate::components::ui::button::Button;
 use crate::components::ui::main_title::MainTitle;
 use crate::components::ui::text_with_error::TextWithError;
@@ -34,9 +34,7 @@ pub fn CreateUserPage() -> impl IntoView {
                 show_info(format!("Создан пользователь {}", &user.username.unwrap()), messages);
                 create_user.clear();
             }
-            Err(err) => {
-                show_error(err.to_string(), messages);
-            }
+            Err(err) => show_server_error(err, messages),
         },
         None => (),
     });

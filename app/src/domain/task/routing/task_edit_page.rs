@@ -7,7 +7,7 @@ use validator::Validate;
 use crate::common::validate_helper::{
     ui_build_common_error, ui_build_validation_errors, validate_form, validation_errors_to_map,
 };
-use crate::components::layout::message_banner::{Messages, show_error, show_info};
+use crate::components::layout::message_banner::{Messages, show_info, show_server_error};
 use crate::components::ui::button::Button;
 use crate::components::ui::button_link::ButtonLink;
 use crate::components::ui::checkbox_with_label::CheckboxWithLabel;
@@ -34,7 +34,7 @@ pub fn TaskEditPage() -> impl IntoView {
 
     Effect::new(move |_| {
         if let Some(Err(err)) = task_resource.get() {
-            show_error(err.to_string(), messages);
+            show_server_error(err, messages);
             navigate("/", Default::default());
         }
     });
@@ -83,9 +83,7 @@ pub fn TaskEditForm(
                 show_info("Задача сохранена!".to_owned(), messages);
                 update_or_create_task.clear();
             }
-            Err(err) => {
-                show_error(err.to_string(), messages);
-            }
+            Err(err) => show_server_error(err, messages),
         },
         None => (),
     });

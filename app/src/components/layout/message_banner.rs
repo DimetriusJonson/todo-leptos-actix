@@ -95,7 +95,16 @@ pub fn show_info(msg: String, messages: Messages) {
     show_message(msg, "INFO".to_string(), Duration::from_millis(5000), messages);
 }
 
-pub fn show_error(msg: String, messages: Messages) {
+//pub fn show_error(msg: String, messages: Messages) {
+//    show_message(msg, "ERROR".to_string(), Duration::from_millis(30000), messages);
+//}
+
+pub fn show_server_error(err: ServerFnError, messages: Messages) {
+    let msg = match err {
+        ServerFnError::ServerError(msg) => msg,
+        _ => err.to_string(),
+    };
+
     show_message(msg, "ERROR".to_string(), Duration::from_millis(30000), messages);
 }
 
