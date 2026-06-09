@@ -23,8 +23,6 @@ use crate::domain::task::task_services::{UpdateOrCreateTask, get_priorities, get
 #[component]
 pub fn TaskEditPage() -> impl IntoView {
     let params = use_params_map();
-    let navigate = leptos_router::hooks::use_navigate();
-    let messages = use_context::<Messages>().expect("Cant get messages context!");
 
     let task_resource = Resource::new_blocking(
         move || params.read().get("id"),
@@ -32,26 +30,16 @@ pub fn TaskEditPage() -> impl IntoView {
     );
     let priorities_resource = OnceResource::new(get_priorities());
 
-    Effect::new(move |_| {
-        if let Some(Err(err)) = task_resource.get() {
-            show_server_error(err, messages);
-            navigate("/", Default::default());
-        }
-    });
-
     view! {
         <div class="container p-4">
             <MainTitle title=move || match params.read().get("id") {
-        Some(_) => "Редактировать задачу".to_owned(),
-        None => "Создать задачу".to_owned(),
-    } />
+                Some(_) => "Редактировать задачу".to_owned(),
+                None => "Создать задачу".to_owned(),
+            } />
             <Transition fallback=move || view! { <TaskEditForm task={Task::default()} priorities={None} disabled=true /> }>
                 {move || Suspend::new(async move {
-                    let task = task_resource.await.unwrap_or_default();
                     let priorities = priorities_resource.await.ok();
-                    view! {
-                        <TaskEditForm task priorities disabled=false />
-                    }
+                    task_resource.await.map(|task| view! { <TaskEditForm task priorities disabled=false /> })
                 })}
             </Transition>
         </div>

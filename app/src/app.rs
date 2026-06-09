@@ -62,27 +62,43 @@ pub fn App() -> impl IntoView {
                     <main>
                         <MessageBanner />
                         <Navbar />
-                        <Routes transition=true fallback=NotFound>
-                            <ParentRoute path=path!("/") view=Outlet>
 
-                                <ParentRoute path=StaticSegment(UserRoutes::base_segment()) view=Outlet>
-                                    <Route path=StaticSegment(UserRoutes::create_segment()) view=CreateUserPage />
-                                    <Route path=StaticSegment(UserRoutes::login_segment()) view=LoginPage />
+                        <ErrorBoundary fallback=move |errors| view! {
+                            <section class="section">
+                                <div class="box has-text-centered">
+                                    <div class="title is-size-1 has-text-danger">500</div>
+                                    <ul>
+                                        {move || errors.get()
+                                            .into_iter()
+                                            .map(|(_, error)| view! { <li>{error.to_string()}</li> })
+                                            .collect::<Vec<_>>()
+                                        }
+                                    </ul>
+                                </div>
+                            </section> }>
+                            <Routes transition=true fallback=NotFound>
+                                <ParentRoute path=path!("/") view=Outlet>
+
+                                    <ParentRoute path=StaticSegment(UserRoutes::base_segment()) view=Outlet>
+                                        <Route path=StaticSegment(UserRoutes::create_segment()) view=CreateUserPage />
+                                        <Route path=StaticSegment(UserRoutes::login_segment()) view=LoginPage />
+                                    </ParentRoute>
+
+                                    <ParentRoute path=StaticSegment(TaskRoutes::base_segment()) view=Outlet>
+                                        <Route path=StaticSegment(TaskRoutes::create_segment()) view=TaskEditPage />
+                                        <Route path=path!(":id") view=TaskPage />
+                                        <Route path=path!(":id/edit") view=TaskEditPage />
+                                    </ParentRoute>
+
+                                    <Route path=path!("") view=HomePage />
+
                                 </ParentRoute>
 
-                                <ParentRoute path=StaticSegment(TaskRoutes::base_segment()) view=Outlet>
-                                    <Route path=StaticSegment(TaskRoutes::create_segment()) view=TaskEditPage />
-                                    <Route path=path!(":id") view=TaskPage />
-                                    <Route path=path!(":id/edit") view=TaskEditPage />
-                                </ParentRoute>
+                                <Route path=path!("/*any") view=NotFound />
 
-                                <Route path=path!("") view=HomePage />
+                            </Routes>
+                        </ErrorBoundary>
 
-                            </ParentRoute>
-
-                            <Route path=path!("/*any") view=NotFound />
-
-                        </Routes>
                     </main>
                 </div>
             </section>

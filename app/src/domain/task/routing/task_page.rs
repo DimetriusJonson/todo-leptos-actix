@@ -1,9 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 
-use crate::components::layout::message_banner::{
-    Messages, show_info, show_server_error,
-};
+use crate::components::layout::message_banner::{Messages, show_info, show_server_error};
 use crate::components::ui::button::Button;
 use crate::components::ui::button_link::ButtonLink;
 use crate::domain::task::model::task::Task;
@@ -15,18 +13,8 @@ pub fn TaskPage() -> impl IntoView {
     let params = use_params_map();
     let id = move || params.read().get("id").unwrap_or_default();
 
-    let messages = use_context::<Messages>().expect("Cant get messages context!");
-    let navigate = leptos_router::hooks::use_navigate();
-
     let task_resource =
         Resource::new_blocking(id, async move |id| get_task(id.parse().unwrap_or(0)).await);
-
-    Effect::new(move |_| {
-        if let Some(Err(err)) = task_resource.get() {
-            show_server_error(err, messages);
-            navigate("/", Default::default());
-        }
-    });
 
     view! {
         <div class="container p-4">
@@ -40,10 +28,7 @@ pub fn TaskPage() -> impl IntoView {
                         fallback=move || view! { <TaskDetails task=Task {title: Some("...".to_owned()), description: Some("...".to_owned()), ..Task::default()} /> }
                         >
                         {move || task_resource.get().map(|data| {
-                            let task = data.ok().unwrap_or_default();
-                            view! {
-                                <TaskDetails task />
-                            }
+                            data.map(|task| view! { <TaskDetails task /> })
                         })}
                     </Transition>
                 </div>
