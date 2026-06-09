@@ -3,10 +3,12 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes, RoutingProgress};
+use leptos_router::hooks::use_navigate;
 use leptos_router::{StaticSegment, path};
 
 use crate::components::layout::message_banner::MessageBanner;
 use crate::components::layout::navbar::Navbar;
+use crate::components::ui::button_link::ButtonLink;
 use crate::domain::home::routing::home_page::HomePage;
 use crate::domain::task::routing::routes::TaskRoutes;
 use crate::domain::task::routing::task_edit_page::TaskEditPage;
@@ -63,19 +65,38 @@ pub fn App() -> impl IntoView {
                         <MessageBanner />
                         <Navbar />
 
-                        <ErrorBoundary fallback=move |errors| view! {
-                            <section class="section">
-                                <div class="box has-text-centered">
-                                    <div class="title is-size-1 has-text-danger">500</div>
-                                    <ul>
-                                        {move || errors.get()
-                                            .into_iter()
-                                            .map(|(_, error)| view! { <li>{format_error(error)}</li> })
-                                            .collect::<Vec<_>>()
-                                        }
-                                    </ul>
-                                </div>
-                            </section> }>
+                        <ErrorBoundary fallback=move |errors| {
+                            let navigate = use_navigate();
+
+                            let errors_clear = errors.clone();
+                            let on_click = move |_| {
+                                errors_clear.set(Errors::default());
+                                navigate("/", Default::default());
+                            };
+
+                            view! {
+                                <section class="section">
+                                    <div class="box has-text-centered">
+                                        <div class="title is-size-1 has-text-danger">500</div>
+                                        <ul>
+                                            {move || errors.get()
+                                                .into_iter()
+                                                .map(|(_, error)| view! { <li>{format_error(error)}</li> })
+                                                .collect::<Vec<_>>()
+                                            }
+                                        </ul>
+                                        <div class="m-5">
+                                            <ButtonLink
+                                                class_name="is-primary is-size-7-mobile".to_owned()
+                                                href="/".to_owned()
+                                                label="Вернутся Домой".to_owned()
+                                                on:click=on_click
+                                            />
+                                        </div>
+                                    </div>
+                                </section>
+                            }
+                        }>
                             <Routes transition=true fallback=NotFound>
                                 <ParentRoute path=path!("/") view=Outlet>
 
@@ -121,9 +142,5 @@ pub fn NotFound() -> impl IntoView {
 fn format_error(error: Error) -> String {
     let msg = error.to_string();
 
-    if let Some(pos) = msg.find('|') {
-        msg[pos + 1..].to_string()
-    } else {
-        error.to_string()
-    }
+    if let Some(pos) = msg.find('|') { msg[pos + 1..].to_string() } else { error.to_string() }
 }
