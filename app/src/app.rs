@@ -3,7 +3,7 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos_meta::{Meta, MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{Outlet, ParentRoute, Route, Router, Routes, RoutingProgress};
-use leptos_router::hooks::use_navigate;
+use leptos_router::hooks::{use_navigate, use_query_map};
 use leptos_router::{StaticSegment, path};
 
 use crate::components::layout::message_banner::MessageBanner;
@@ -16,6 +16,7 @@ use crate::domain::task::routing::task_page::TaskPage;
 use crate::domain::user::routing::create_user_page::CreateUserPage;
 use crate::domain::user::routing::login_page::LoginPage;
 use crate::domain::user::routing::routes::UserRoutes;
+use crate::domain::user::user_services::auth_data;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -55,6 +56,14 @@ pub fn App() -> impl IntoView {
 
         <Router set_is_routing>
 
+            {
+                let query_map = use_query_map();
+                let auth = move || query_map.with(|m| m.get("auth"));
+                let user_resource = Resource::new_blocking(auth, |_s| async move { auth_data().await });
+
+                provide_context(user_resource);
+            }
+
             <div class="progress-container pt-0 mt-0">
                 <RoutingProgress is_routing max_time=Duration::from_millis(250) />
             </div>
@@ -63,7 +72,6 @@ pub fn App() -> impl IntoView {
                 <div class="is-paddingless">
                     <main>
                         <MessageBanner />
-                        <Navbar />
 
                         <ErrorBoundary fallback=move |errors| {
                             let navigate = use_navigate();
@@ -97,6 +105,8 @@ pub fn App() -> impl IntoView {
                                 </section>
                             }
                         }>
+                            <Navbar />
+
                             <Routes transition=true fallback=NotFound>
                                 <ParentRoute path=path!("/") view=Outlet>
 

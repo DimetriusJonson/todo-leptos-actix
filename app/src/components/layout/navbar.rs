@@ -1,26 +1,22 @@
 use leptos::prelude::*;
-use leptos_router::hooks::use_query_map;
 
 use crate::components::layout::message_banner::{Messages, show_info, show_server_error};
 use crate::components::ui::button::Button;
 use crate::components::ui::button_link::ButtonLink;
 use crate::domain::home::routing::routes::HomeRoutes;
+use crate::domain::user::model::user::User;
 use crate::domain::user::routing::routes::UserRoutes;
-use crate::domain::user::user_services::{Logout, auth_data};
+use crate::domain::user::user_services::Logout;
 
 #[component]
 pub fn Navbar() -> impl IntoView {
     let (nav_links_active, set_nav_links_active) = signal(false);
 
+    let user_resource = use_context::<Resource<Result<User, ServerFnError>>>().unwrap();
+
     let messages = use_context::<Messages>().expect("Cant get messages context!");
 
     let logout = ServerAction::<Logout>::new();
-
-    let query_map = use_query_map();
-    let auth = move || query_map.with(|m| m.get("auth"));
-
-    let user_resource = Resource::new_blocking(auth, |_s| async move { auth_data().await });
-    provide_context(user_resource);
 
     Effect::new(move |_| {
         if let Some(res) = logout.value().get() {
