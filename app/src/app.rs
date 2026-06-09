@@ -70,7 +70,7 @@ pub fn App() -> impl IntoView {
                                     <ul>
                                         {move || errors.get()
                                             .into_iter()
-                                            .map(|(_, error)| view! { <li>{error.to_string()}</li> })
+                                            .map(|(_, error)| view! { <li>{format_error(error)}</li> })
                                             .collect::<Vec<_>>()
                                         }
                                     </ul>
@@ -115,5 +115,15 @@ pub fn NotFound() -> impl IntoView {
                 <div class="subtitle">Страница не найдена</div>
             </div>
         </section>
+    }
+}
+
+fn format_error(error: Error) -> String {
+    let msg = error.to_string();
+
+    if let Some(pos) = msg.find('|') {
+        msg[pos + 1..].to_string()
+    } else {
+        error.to_string()
     }
 }
