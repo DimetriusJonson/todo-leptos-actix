@@ -37,11 +37,11 @@ pub mod ssr {
     pub struct Claims {
         exp: usize,
         iat: usize,
-        pub user_id: i64,
+        pub user_id: i32,
         pub user_name: String,
     }
 
-    pub fn create_token(user_id: i64, user_name: String) -> Result<String, ServerFnError> {
+    pub fn create_token(user_id: i32, user_name: String) -> Result<String, ServerFnError> {
         let now = Utc::now();
         let exp = now + Duration::hours(7 * 24);
 

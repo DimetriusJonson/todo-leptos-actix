@@ -28,7 +28,7 @@ pub fn TasksList(filter: ReadSignal<Option<String>>) -> impl IntoView {
         checkbox.set_checked(!value);
 
         if let Some(index_und) = name.find('_')
-            && let Ok(id) = name[index_und + 1..].parse::<i64>()
+            && let Ok(id) = name[index_und + 1..].parse::<i32>()
         {
             spawn_local(async move {
                 set_change_completed_in_progress.set(true);

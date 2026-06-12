@@ -5,6 +5,11 @@ edition = "2024"
 resolver = "2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["sqlx-postgres"]
+sqlx-postgres = ["sqlx/postgres"]
+sqlx-sqlite = ["sqlx/sqlite"]
+
 [dependencies]
 anyhow.workspace = true
 actix-files.workspace = true
@@ -12,7 +17,7 @@ actix-web.workspace = true
 dotenv.workspace = true
 leptos_actix.workspace = true
 log.workspace = true
-sqlx.workspace = true
+sqlx = { workspace = true, optional = true, features = ["postgres", "tls-rustls"]}
 tracing.workspace = true
 tracing-log.workspace = true
 tracing-subscriber.workspace = true

@@ -21,11 +21,11 @@ impl TaskRoutes {
         "Task"
     }
 
-    pub fn details_url(id: i64) -> String {
+    pub fn details_url(id: i32) -> String {
         format!("/task/{id}")
     }
 
-    pub fn edit_url(id: i64) -> String {
+    pub fn edit_url(id: i32) -> String {
         format!("/task/{id}/edit")
     }
 }
